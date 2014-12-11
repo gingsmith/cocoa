@@ -1,0 +1,47 @@
+*.class
+*.log
+*~
+*.scala~
+*.swp
+*.iml
+.idea/
+.settings
+.cache
+/build/
+work/
+out/
+.DS_Store
+conf/java-opts
+conf/spark-env.sh
+docs/_site
+docs/api
+target/
+reports/
+.project
+.classpath
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/build.properties
+project/build/target/
+project/plugins/target/
+project/plugins/lib_managed/
+project/plugins/src_managed/
+logs/
+log/
+spark-tests.log
+
+# sbt specific
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.idea*
+.scala_dependencies
+
+# Jars
+*.jar
