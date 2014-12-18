@@ -1,6 +1,6 @@
 # CoCoA - Communication-Efficient Distributed Coordinate Ascent
 
-The demo code performs a comparison of 4 distributed algorithms for training of machine learning models, using [Apache Spark](http://mspark.apache.org/). The implemented algorithms are
+This code performs a comparison of 4 distributed algorithms for training of machine learning models, using [Apache Spark](http://spark.apache.org). The implemented algorithms are
  - _CoCoA_
  - mini-batch stochastic dual coordinate ascent (_mini-batch SDCA_)
  - stochastic subgradient descent with local updates (_local SGD_)
@@ -16,7 +16,7 @@ sbt/sbt assembly
 ./run-demo-local.sh
 ```
 
-(For the `sbt` script to run, make sure you have downloaded cocoa into a directory whose path contains no spaces.)
+(For the `sbt` script to run, make sure you have downloaded CoCoA into a directory whose path contains no spaces.)
 
 ## References
 The CoCoA algorithmic framework is described in more details in the following paper:
