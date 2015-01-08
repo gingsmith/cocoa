@@ -33,6 +33,7 @@ object driver {
     val localIterFrac = options.getOrElse("localIterFrac","1.0").toDouble; // fraction of local points to be processed per round, H = localIterFrac * n
     val beta = options.getOrElse("beta","1.0").toDouble;  // scaling parameter when combining the updates of the workers (1=averaging)
     val debugIter = options.getOrElse("debugIter","10").toInt // set to -1 to turn off debugging output
+    val seed = options.getOrElse("seed","0").toInt // set seed for debug purposes
 
     // print out inputs
     println("master:       " + master);          println("trainFile:    " + trainFile);
@@ -41,7 +42,7 @@ object driver {
     println("testfile:     " + testFile);        println("justCoCoA     " + justCoCoA);       
     println("lambda:       " + lambda);          println("numRounds:    " + numRounds);       
     println("localIterFrac:" + localIterFrac);   println("beta          " + beta);     
-    println("debugIter     " + debugIter);       
+    println("debugIter     " + debugIter);       println("seed          " + seed);   
 
     // start spark context
     val conf = new SparkConf().setMaster(master)
@@ -72,22 +73,22 @@ object driver {
 
 
     // run CoCoA
-    val (finalwCoCoA, finalalphaCoCoA) = CoCoA.runCoCoA(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter)
+    val (finalwCoCoA, finalalphaCoCoA) = CoCoA.runCoCoA(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed)
     OptUtils.printSummaryStatsPrimalDual("CoCoA", data, finalwCoCoA, finalalphaCoCoA, lambda, testData)
 
     // optionally run other methods for comparison
     if(!justCoCoA) { 
 
       // run Mini-batch CD
-      val (finalwMbCD, finalalphaMbCD) = MinibatchCD.runMbCD(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter)
+      val (finalwMbCD, finalalphaMbCD) = MinibatchCD.runMbCD(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed)
       OptUtils.printSummaryStatsPrimalDual("Mini-batch CD", data, finalwMbCD, finalalphaMbCD, lambda, testData)
 
       // run Mini-batch SGD
-      val finalwMbSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=false, beta, chkptIter, testData, debugIter)
+      val finalwMbSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=false, beta, chkptIter, testData, debugIter, seed)
       OptUtils.printSummaryStats("Mini-batch SGD", data, finalwMbSGD, lambda, testData)
     
       // run Local SGD
-      val finalwLocalSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=true, beta, chkptIter, testData, debugIter)
+      val finalwLocalSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=true, beta, chkptIter, testData, debugIter, seed)
       OptUtils.printSummaryStats("Local SGD", data, finalwLocalSGD, lambda, testData)
 
     }

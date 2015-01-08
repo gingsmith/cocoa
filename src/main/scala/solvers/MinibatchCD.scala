@@ -33,7 +33,8 @@ object MinibatchCD {
     beta: Double, 
     chkptIter: Int, 
     testData: RDD[SparseClassificationPoint], 
-    debugIter: Int) : (Array[Double], RDD[(Int, Double)]) = {
+    debugIter: Int,
+    seed: Int) : (Array[Double], RDD[(Int, Double)]) = {
     
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
     println("\nRunning Mini-batch CD on "+n+" data examples, distributed over "+parts+" workers")
@@ -43,16 +44,16 @@ object MinibatchCD {
     var w = wInit
     val scaling = beta / (parts * localIters);
 
-    for(t <- 1 until numRounds+1){
+    for(t <- 1 to numRounds){
 
       // zip alpha with data
       val zipData = alpha.zip(data)
 
       // find updates to alpha, w
-      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling),preservesPartitioning=true).persist()
+      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling,seed+t),preservesPartitioning=true).persist()
       alpha = updates.map(kv => kv._2)
       val primalVariables = updates.map(kv => kv._1)
-      val primalUpdates = primalVariables.mapPartitions(singleElementFromPartition,preservesPartitioning=true).reduce(_ plus _)
+      val primalUpdates = primalVariables.mapPartitions(x => Iterator(x.next())).reduce(_ plus _)
       w = primalUpdates.times(scaling).plus(w)
 
       // optionally calculate errors
@@ -73,13 +74,6 @@ object MinibatchCD {
     return (w, alpha)
   }
 
-  private def singleElementFromPartition(
-    primalVariables: Iterator[Array[Double]]): Iterator[Array[Double]] = {
-    var wVectorList = List[Array[Double]]()
-    wVectorList = primalVariables.next() :: wVectorList
-    return wVectorList.iterator
-  }
-
   /**
    * Performs one round of mini-batch CD updates
    *
@@ -97,7 +91,8 @@ object MinibatchCD {
     localIters: Int, 
     lambda: Double, 
     n: Int, 
-    scaling: Double): Iterator[(Array[Double], (Int, Double))] = {
+    scaling: Double,
+    seed: Int): Iterator[(Array[Double], (Int, Double))] = {
 
     val zipArr = zipData.toArray
     var localData = zipArr.map(x => x._2)
@@ -106,7 +101,7 @@ object MinibatchCD {
     val alphaOld = alpha.clone
     var w = wInit
     val nLocal = localData.length
-    var r = new scala.util.Random
+    var r = new scala.util.Random(seed)
     var deltaW = Array.fill(wInit.length)(0.0)
 
         // perform local udpates
@@ -132,7 +127,7 @@ object MinibatchCD {
         val qii  = x.dot(x)
         var newAlpha = 1.0
         if (qii != 0.0) {
-          newAlpha = Math.min(Math.max(alpha(idx) - grad / qii, 0.0), 1.0)
+          newAlpha = Math.min(Math.max((alpha(idx) - (grad / qii)), 0.0), 1.0)
         }
 
         // update primal and dual variables

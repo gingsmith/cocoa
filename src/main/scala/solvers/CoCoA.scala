@@ -35,7 +35,8 @@ object CoCoA {
     beta: Double, 
     chkptIter: Int, 
     testData: RDD[SparseClassificationPoint], 
-    debugIter: Int) : (Array[Double], RDD[(Int, Double)]) = {
+    debugIter: Int,
+    seed: Int) : (Array[Double], RDD[(Int, Double)]) = {
     
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
     println("\nRunning CoCoA on "+n+" data examples, distributed over "+parts+" workers")
@@ -45,16 +46,16 @@ object CoCoA {
     var w = wInit
     val scaling = beta / parts;
 
-    for(t <- 1 until numRounds+1){
+    for(t <- 1 to numRounds){
 
       // zip alpha with data
       val zipData = alpha.zip(data)
 
       // find updates to alpha, w
-      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling),preservesPartitioning=true).persist()
+      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling,seed+t),preservesPartitioning=true).persist()
       alpha = updates.map(kv => kv._2)
       val primalVariables = updates.map(kv => kv._1)
-      val primalUpdates = primalVariables.mapPartitions(singleElementFromPartition,preservesPartitioning=true).reduce(_ plus _)
+      val primalUpdates = primalVariables.mapPartitions(x => Iterator(x.next())).reduce(_ plus _)
       w = primalUpdates.times(scaling).plus(w)
 
       // optionally calculate errors
@@ -75,13 +76,6 @@ object CoCoA {
     return (w, alpha)
   }
 
-  private def singleElementFromPartition(
-    primalVariables: Iterator[Array[Double]]): Iterator[Array[Double]] = {
-    var wVectorList = List[Array[Double]]()
-    wVectorList = primalVariables.next() :: wVectorList
-    return wVectorList.iterator
-  }
-
   /**
    * Performs one round of local updates using a given local dual algorithm, 
    * here locaSDCA. Will perform localIters many updates per worker.
@@ -92,6 +86,7 @@ object CoCoA {
    * @param lambda
    * @param n
    * @param scaling this is the scaling factor beta/K in the paper
+   * @param seed
    * @return
    */
   private def partitionUpdate(
@@ -100,14 +95,15 @@ object CoCoA {
     localIters: Int, 
     lambda: Double, 
     n: Int, 
-    scaling: Double): Iterator[(Array[Double], (Int, Double))] = {
+    scaling: Double,
+    seed: Int): Iterator[(Array[Double], (Int, Double))] = {
 
     val zipArr = zipData.toArray
     var localData = zipArr.map(x => x._2)
     var alpha = zipArr.map(x => x._1._2)
     val indices = (0 to localData.length-1).map(x => localData(x).index).toArray
     val alphaOld = alpha.clone
-    val (deltaAlpha, deltaW) = localSDCA(localData, wInit, localIters, lambda, n, alpha, alphaOld)
+    val (deltaAlpha, deltaW) = localSDCA(localData, wInit, localIters, lambda, n, alpha, alphaOld, seed)
     
     alpha = alphaOld.plus(deltaAlpha.times(scaling))
     var wArray = Array.fill(localData.length)(Array(0.0))
@@ -134,6 +130,7 @@ object CoCoA {
    * @param n global number of points (needed for the primal-dual correspondence)
    * @param alpha
    * @param alphaOld
+   * @param seed
    * @return deltaAlpha and deltaW, summarizing the performed local changes, see paper
    */
   def localSDCA(
@@ -143,10 +140,11 @@ object CoCoA {
     lambda: Double, 
     n: Int,
     alpha: Array[Double], 
-    alphaOld: Array[Double]): (Array[Double], Array[Double]) = {
+    alphaOld: Array[Double],
+    seed: Int): (Array[Double], Array[Double]) = {
     var w = wInit
     val nLocal = localData.length
-    var r = new scala.util.Random
+    var r = new scala.util.Random(seed)
     var deltaW = Array.fill(wInit.length)(0.0)
 
     // perform local udpates
@@ -172,7 +170,7 @@ object CoCoA {
         val qii  = x.dot(x)
         var newAlpha = 1.0
         if (qii != 0.0) {
-          newAlpha = Math.min(Math.max(alpha(idx) - grad / qii, 0.0), 1.0)
+          newAlpha = Math.min(Math.max((alpha(idx) - (grad / qii)), 0.0), 1.0)
         }
 
         // update primal and dual variables

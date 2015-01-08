@@ -36,7 +36,8 @@ object SGD {
     beta: Double, 
     chkptIter: Int,
     testData: RDD[SparseClassificationPoint],
-    debugIter: Int) : Array[Double] = {
+    debugIter: Int,
+    seed: Int) : Array[Double] = {
     
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
     println("\nRunning SGD (with local updates = "+local+") on "+n+" data examples, distributed over "+parts+" workers")
@@ -51,7 +52,7 @@ object SGD {
       scaling = beta / (parts * localIters)
     }
 
-    for(t <- 1 until numRounds+1){
+    for(t <- 1 to numRounds){
 
       // update step size
       val step = 1/(lambda*(t))
@@ -63,7 +64,7 @@ object SGD {
       }
 
       // find updates to w
-      val updates = data.mapPartitions(partitionUpdate(_, w, lambda, ((t-1) * localIters * parts), localIters, local, parts), preservesPartitioning = true).persist()
+      val updates = data.mapPartitions(partitionUpdate(_, w, lambda, ((t-1) * localIters * parts), localIters, local, parts, seed+t), preservesPartitioning = true).persist()
       val primalUpdates = updates.reduce(_ plus _)
       if (local) {
         w = primalUpdates.times(scaling).plus(w)
@@ -102,11 +103,12 @@ object SGD {
     t:Double, 
     localIters:Int, 
     local:Boolean, 
-    parts:Int) : Iterator[Array[Double]] = {
+    parts:Int,
+    seed: Int) : Iterator[Array[Double]] = {
 
     val dataArr = localData.toArray
     val nLocal = dataArr.length
-    var r = new scala.util.Random
+    var r = new scala.util.Random(seed)
     var w = wInit.clone
     var deltaW = Array.fill(wInit.length)(0.0)
 
