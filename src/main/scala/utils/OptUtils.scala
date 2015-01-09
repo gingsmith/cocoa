@@ -2,7 +2,6 @@ package distopt.utils
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import scala.collection.immutable.SortedMap
 import scala.util._
 import java.io._
 import scala.io.Source
@@ -39,9 +38,10 @@ object OptUtils {
             label = 1
 
           // parse features
-          var features = new SparseVector(SortedMap(parts.slice(1,parts.length)
-               .map(_.split(':') 
-               match { case Array(i,j) => (i.toInt-1,j.toDouble)}):_*))
+          val featureArray = parts.slice(1,parts.length)
+            .map(_.split(':') 
+            match { case Array(i,j) => (i.toInt-1,j.toDouble)}).toArray
+          var features = new SparseVector(featureArray.map(x=>x._1), featureArray.map(x=>x._2))
 
           // create classification point
           Iterator(SparseClassificationPoint(index,label,features))
@@ -77,8 +77,10 @@ object OptUtils {
         val parts = line.trim().split(",")
         val label = if(parts(0)==c) 1 else -1
 
-        val features = new SparseVector(SortedMap((1 to parts.length-1)
-          .map( a => (a.toInt-1,parts(a).toDouble)).filter{ case(a,b) => b!=0.0 }:_*))
+        // parse features
+        val featureArray = (1 to parts.length-1)
+          .map( a => (a.toInt-1,parts(a).toDouble)).filter{ case(a,b) => b!=0.0 }.toArray
+        val features = new SparseVector(featureArray.map(x => x._1), featureArray.map(x => x._2))
 
         // create classification point
         SparseClassificationPoint(index,label,features)
@@ -113,7 +115,7 @@ object OptUtils {
       return X.times(y)
     }
     else{
-      return new SparseVector(SortedMap.empty[Int,Double])
+      return new SparseVector(Array[Int](),Array[Double]())
     }
   }
 

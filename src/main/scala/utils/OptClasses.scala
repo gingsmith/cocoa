@@ -2,7 +2,6 @@ package distopt.utils
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import scala.collection.immutable.SortedMap
 
 // Dense Classification Point
 case class ClassificationPoint(val label: Double, val features: Array[Double])
@@ -17,40 +16,46 @@ case class RegressionPoint(val label: Double, val features: Array[Double])
 case class SparseRegressionPoint(val label: Double, val features: SparseVector)
 
 // Sparse Vector Implementation
-class SparseVector(val data: SortedMap[Int,Double]) extends Serializable{
+class SparseVector(val indices: Array[Int], val values: Array[Double]) extends Serializable{
 
-  def apply(index: Int): Double = data.apply(index)
+  def apply(index: Int): Double = values.apply(indices.indexOf(index))
 
-  def iterator = data.iterator
+  def getOrElse(index: Int, default: Double): Double = {
+    if(this.indices.contains(index)){
+      return this.values(indices.indexOf(index))
+    } 
+    return default
+  }
 
   // scale a sparse vector by a constant
   def times(c: Double) : SparseVector = {
-    return new SparseVector(SortedMap(this.data.mapValues(_*c).toArray:_ *))
+    return new SparseVector(this.indices,this.values.map(x => x*c))
   }
 
   // add this sparse vector to another sparse vector, return sparse vector
   def plus(sparse:SparseVector) : SparseVector = {
-    val list = sparse.data.toList ++ this.data.toList
-    return new SparseVector(SortedMap(list.groupBy ( _._1) .map { case (k,v) => k -> v.map(_._2).sum }.toArray:_*))
+    val combined = sparse.indices.zip(sparse.values) ++ this.indices.zip(this.values)
+    val sumArr = combined.groupBy( _._1).map { case (k,v) => k -> v.map(_._2).sum }.toArray
+    return new SparseVector(sumArr.map(x => x._1), sumArr.map(x => x._2))
   }
 
   // add this sparse vector to a dense vector, return dense vector
   def plus(dense:Array[Double]) : Array[Double] = {
-    this.data.foreach{ case(i,v) => (dense(i) = dense(i)+v)}
+    this.indices.zipWithIndex.foreach{ case(idx,i) => (dense(idx) = dense(idx)+this.values(i))}
     return dense
   }
 
   // dot product of sparse vector (sortedmap) and dense vector
   def dot(dense: Array[Double]) : Double = {
     var total = 0.0
-    this.data.foreach{ case(i,v) => (total += v*dense(i)) }
+    this.indices.zipWithIndex.foreach{ case(idx,i) => (total += this.values(i)*dense(idx)) }
     return total
   }
 
   // dot product of two sparse vectors
   def dot(sparse: SparseVector) : Double = {
     var total = 0.0
-    this.data.foreach{ case(i,v) => (total += v*sparse.data.getOrElse(i,0.0).asInstanceOf[Double]) }
+    this.indices.zipWithIndex.foreach{ case(idx,i) => (total += this.values(i)*sparse.getOrElse(idx,0.0))}
     return total
   }
 }

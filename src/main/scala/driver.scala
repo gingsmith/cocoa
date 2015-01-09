@@ -2,7 +2,6 @@ package distopt
 
 import org.apache.spark.{SparkContext, SparkConf}
 import distopt.utils._
-import scala.collection.immutable.SortedMap
 import distopt.solvers._
 
 object driver {
