@@ -22,6 +22,7 @@ object SGD {
    * @param chkptIter checkpointing the resulting RDDs from time to time, to ensure persistence and shorter dependencies
    * @param testData
    * @param debugIter
+   * @param seed
    * @return
    */
   def runSGD(
@@ -39,6 +40,7 @@ object SGD {
     debugIter: Int,
     seed: Int) : Array[Double] = {
     
+    var dataArr = data.mapPartitions(x => Iterator(x.toArray))
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
     println("\nRunning SGD (with local updates = "+local+") on "+n+" data examples, distributed over "+parts+" workers")
     
@@ -64,7 +66,7 @@ object SGD {
       }
 
       // find updates to w
-      val updates = data.mapPartitions(partitionUpdate(_, w, lambda, ((t-1) * localIters * parts), localIters, local, parts, seed+t), preservesPartitioning = true).persist()
+      val updates = dataArr.mapPartitions(partitionUpdate(_, w, lambda, ((t-1) * localIters * parts), localIters, local, parts, seed+t), preservesPartitioning = true).persist()
       val primalUpdates = updates.reduce(_ plus _)
       if (local) {
         w = primalUpdates.times(scaling).plus(w)
@@ -94,10 +96,11 @@ object SGD {
    * @param localIters
    * @param local
    * @param parts
+   * @param seed
    * @return
    */
   def partitionUpdate(
-    localData: Iterator[SparseClassificationPoint], 
+    localData: Iterator[Array[SparseClassificationPoint]], 
     wInit: Array[Double], 
     lambda:Double, 
     t:Double, 
@@ -106,16 +109,16 @@ object SGD {
     parts:Int,
     seed: Int) : Iterator[Array[Double]] = {
 
-    val dataArr = localData.toArray
+    val dataArr = localData.next()
     val nLocal = dataArr.length
     var r = new scala.util.Random(seed)
     var w = wInit.clone
     var deltaW = Array.fill(wInit.length)(0.0)
 
     // perform updates
-    for (i <- 0 until localIters) {
+    for (i <- 1 to localIters) {
 
-      val step = 1/(lambda*(t+i+1))
+      val step = 1/(lambda*(t+i))
 
       // randomly select an element
       val idx = r.nextInt(nLocal)
@@ -144,7 +147,6 @@ object SGD {
       if (local) {
         deltaW = (wInit.times(-1.0)).plus(w)
       }
-
     }
 
     // return change in weight vector

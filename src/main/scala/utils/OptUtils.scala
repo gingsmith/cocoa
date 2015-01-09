@@ -153,9 +153,9 @@ object OptUtils {
    * @param lambda
    * @return
    */
-  def computeDualObjective(data: RDD[SparseClassificationPoint], w: Array[Double], alpha : RDD[(Int, Double)], lambda: Double): Double = {
+  def computeDualObjective(data: RDD[SparseClassificationPoint], w: Array[Double], alpha : RDD[Array[Double]], lambda: Double): Double = {
     val n = data.count()
-    val sumAlpha = alpha.map(kv => kv._2).reduce(_ + _)
+    val sumAlpha = alpha.map(x => x.sum).reduce(_ + _)
     return (-lambda / 2 * OptUtils.normDense(w) + sumAlpha / n)
   }
   /**
@@ -168,7 +168,7 @@ object OptUtils {
    * @param lambda
    * @return
    */
-  def computeDualityGap(data: RDD[SparseClassificationPoint], w: Array[Double], alpha: RDD[(Int, Double)], lambda: Double): Double = {
+  def computeDualityGap(data: RDD[SparseClassificationPoint], w: Array[Double], alpha: RDD[Array[Double]], lambda: Double): Double = {
     return (computePrimalObjective(data, w, lambda) - computeDualObjective(data, w, alpha, lambda))
   }
 
@@ -177,7 +177,7 @@ object OptUtils {
     return data.map(x => if((x.features).dot(w)*(x.label) > 0) 0.0 else 1.0).reduce(_ + _)/n
   }
 
-  def printSummaryStatsPrimalDual(algName: String, data: RDD[SparseClassificationPoint], w: Array[Double], alpha: RDD[(Int, Double)], lambda: Double, testData: RDD[SparseClassificationPoint]) = {
+  def printSummaryStatsPrimalDual(algName: String, data: RDD[SparseClassificationPoint], w: Array[Double], alpha: RDD[Array[Double]], lambda: Double, testData: RDD[SparseClassificationPoint]) = {
     var outString = algName + " has finished running. Summary Stats: "
     val objVal = computePrimalObjective(data, w, lambda)
     outString = outString + "\n Total Objective Value: " + objVal

@@ -20,6 +20,7 @@ object MinibatchCD {
    * @param chkptIter checkpointing the resulting RDDs from time to time, to ensure persistence and shorter dependencies
    * @param testData
    * @param debugIter
+   * @param seed
    * @return
    */
   def runMbCD(
@@ -34,26 +35,27 @@ object MinibatchCD {
     chkptIter: Int, 
     testData: RDD[SparseClassificationPoint], 
     debugIter: Int,
-    seed: Int) : (Array[Double], RDD[(Int, Double)]) = {
+    seed: Int) : (Array[Double], RDD[Array[Double]]) = {
     
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
     println("\nRunning Mini-batch CD on "+n+" data examples, distributed over "+parts+" workers")
     
     // initialize alpha, w
-    var alpha = data.map(x => (x.index, 0.0)).cache()
+    var alphaVars = data.map(x => 0.0).cache()
+    var alpha = alphaVars.mapPartitions(x => Iterator(x.toArray))
+    var dataArr = data.mapPartitions(x => Iterator(x.toArray))
     var w = wInit
     val scaling = beta / (parts * localIters);
 
     for(t <- 1 to numRounds){
 
       // zip alpha with data
-      val zipData = alpha.zip(data)
+      val zipData = alpha.zip(dataArr)
 
       // find updates to alpha, w
       val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling,seed+t),preservesPartitioning=true).persist()
       alpha = updates.map(kv => kv._2)
-      val primalVariables = updates.map(kv => kv._1)
-      val primalUpdates = primalVariables.mapPartitions(x => Iterator(x.next())).reduce(_ plus _)
+      val primalUpdates = updates.map(kv => kv._1).reduce(_ plus _)
       w = primalUpdates.times(scaling).plus(w)
 
       // optionally calculate errors
@@ -83,21 +85,21 @@ object MinibatchCD {
    * @param lambda
    * @param n
    * @param scaling - possible scaling beta/(K*H) in the paper
+   * @param seed
    * @return
    */
   private def partitionUpdate(
-    zipData: Iterator[((Int, Double), SparseClassificationPoint)],
+    zipData: Iterator[(Array[Double],Array[SparseClassificationPoint])],//((Int, Double), SparseClassificationPoint)],
     wInit: Array[Double], 
     localIters: Int, 
     lambda: Double, 
     n: Int, 
     scaling: Double,
-    seed: Int): Iterator[(Array[Double], (Int, Double))] = {
+    seed: Int): Iterator[(Array[Double], Array[Double])] = {
 
-    val zipArr = zipData.toArray
-    var localData = zipArr.map(x => x._2)
-    var alpha = zipArr.map(x => x._1._2)
-    val indices = (0 to localData.length-1).map(x => localData(x).index).toArray
+    val zipPair = zipData.next()
+    var localData = zipPair._2
+    var alpha = zipPair._1
     val alphaOld = alpha.clone
     var w = wInit
     val nLocal = localData.length
@@ -105,7 +107,7 @@ object MinibatchCD {
     var deltaW = Array.fill(wInit.length)(0.0)
 
         // perform local udpates
-    for (i <- 0 until localIters) {
+    for (i <- 1 to localIters) {
 
       // randomly select a local example
       val idx = r.nextInt(nLocal)
@@ -139,11 +141,9 @@ object MinibatchCD {
 
     val deltaAlpha = (alphaOld.times(-1.0)).plus(alpha)   
     alpha = alphaOld.plus(deltaAlpha.times(scaling))
-    var wArray = Array.fill(localData.length)(Array(0.0))
-    wArray(0) = deltaW
 
     // return weight vector, alphas
-    return wArray.zip(indices.zip(alpha)).iterator
+    return Iterator((deltaW, alpha))
   }
 
 }

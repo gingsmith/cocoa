@@ -83,13 +83,13 @@ object driver {
       val (finalwMbCD, finalalphaMbCD) = MinibatchCD.runMbCD(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed)
       OptUtils.printSummaryStatsPrimalDual("Mini-batch CD", data, finalwMbCD, finalalphaMbCD, lambda, testData)
 
-      // run Mini-batch SGD
-      val finalwMbSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=false, beta, chkptIter, testData, debugIter, seed)
-      OptUtils.printSummaryStats("Mini-batch SGD", data, finalwMbSGD, lambda, testData)
+     // run Mini-batch SGD
+     val finalwMbSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=false, beta, chkptIter, testData, debugIter, seed)
+     OptUtils.printSummaryStats("Mini-batch SGD", data, finalwMbSGD, lambda, testData)
     
-      // run Local SGD
-      val finalwLocalSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=true, beta, chkptIter, testData, debugIter, seed)
-      OptUtils.printSummaryStats("Local SGD", data, finalwLocalSGD, lambda, testData)
+     // run Local SGD
+     val finalwLocalSGD = SGD.runSGD(sc, data, n, wInit, numRounds, localIters, lambda, local=true, beta, chkptIter, testData, debugIter, seed)
+     OptUtils.printSummaryStats("Local SGD", data, finalwLocalSGD, lambda, testData)
 
     }
 
