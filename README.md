@@ -1,6 +1,9 @@
-# CoCoA - Communication-Efficient Distributed Coordinate Ascent
+# CoCoA & CoCoA+ - Communication-Efficient Distributed Coordinate Ascent
 
-This code performs a comparison of 4 distributed algorithms for training of machine learning models, using [Apache Spark](http://spark.apache.org). The implemented algorithms are
+NEW! We've added support for faster additive udpates with CoCoA+. See more information [here](http://arxiv.org/abs/1502.03508).
+
+This code performs a comparison of 5 distributed algorithms for training of machine learning models, using [Apache Spark](http://spark.apache.org). The implemented algorithms are
+ - _CoCoA+_
  - _CoCoA_
  - mini-batch stochastic dual coordinate ascent (_mini-batch SDCA_)
  - stochastic subgradient descent with local updates (_local SGD_)
