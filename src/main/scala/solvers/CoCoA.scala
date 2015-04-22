@@ -37,17 +37,19 @@ object CoCoA {
     chkptIter: Int, 
     testData: RDD[SparseClassificationPoint], 
     debugIter: Int,
-    seed: Int) : (Array[Double], RDD[Array[Double]]) = {
+    seed: Int,
+    plus: Boolean) : (Array[Double], RDD[Array[Double]]) = {
     
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
-    println("\nRunning CoCoA on "+n+" data examples, distributed over "+parts+" workers")
+    val alg = if (plus) "CoCoA+" else "CoCoA"
+    println("\nRunning "+alg+" on "+n+" data examples, distributed over "+parts+" workers")
     
     // initialize alpha, w
     var alphaVars = data.map(x => 0.0).cache()
     var alpha = alphaVars.mapPartitions(x => Iterator(x.toArray))
     var dataArr = data.mapPartitions(x => Iterator(x.toArray))
     var w = wInit
-    val scaling = beta / parts;
+    var scaling = if (plus) beta else 1.0/parts
 
     for(t <- 1 to numRounds){
 
@@ -55,10 +57,14 @@ object CoCoA {
       val zipData = alpha.zip(dataArr)
 
       // find updates to alpha, w
-      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling,seed+t),preservesPartitioning=true).persist()
+      val updates = zipData.mapPartitions(partitionUpdate(_,w,localIters,lambda,n,scaling,seed+t,plus,parts*beta),preservesPartitioning=true).persist()
       alpha = updates.map(kv => kv._2)
       val primalUpdates = updates.map(kv => kv._1).reduce(_ plus _)
-      w = primalUpdates.times(scaling).plus(w)
+      if (plus) {
+        w = primalUpdates.plus(w)
+      } else {
+        w = primalUpdates.times(scaling).plus(w)
+      }
 
       // optionally calculate errors
       if (debugIter>0 && t % debugIter == 0) {
@@ -98,15 +104,21 @@ object CoCoA {
     lambda: Double, 
     n: Int, 
     scaling: Double,
-    seed: Int): Iterator[(Array[Double], Array[Double])] = {
+    seed: Int,
+    plus: Boolean,
+    sigma: Double): Iterator[(Array[Double], Array[Double])] = {
 
     val zipPair = zipData.next()
     val localData = zipPair._2
     var alpha = zipPair._1
     val alphaOld = alpha.clone
-    val (deltaAlpha, deltaW) = localSDCA(localData, wInit, localIters, lambda, n, alpha, alphaOld, seed)
+    val (deltaAlpha, deltaW) = localSDCA(localData, wInit, localIters, lambda, n, alpha, alphaOld, seed, plus, sigma)
     
-    alpha = alphaOld.plus(deltaAlpha.times(scaling))
+    if (plus) {
+      alpha = alphaOld.plus(deltaAlpha)
+    } else {
+      alpha = alphaOld.plus(deltaAlpha.times(scaling))
+    }
     return Iterator((deltaW, alpha))
   }
 
@@ -138,7 +150,10 @@ object CoCoA {
     n: Int,
     alpha: Array[Double], 
     alphaOld: Array[Double],
-    seed: Int): (Array[Double], Array[Double]) = {
+    seed: Int,
+    plus: Boolean,
+    sigma: Double): (Array[Double], Array[Double]) = {
+    
     var w = wInit
     val nLocal = localData.length
     var r = new scala.util.Random(seed)
@@ -154,7 +169,13 @@ object CoCoA {
       val x = currPt.features
 
       // compute hinge loss gradient
-      val grad = (y*(x.dot(w)) - 1.0)*(lambda*n)
+      val grad = {
+        if (plus) {
+          (y*(x.dot(w)+sigma*x.dot(deltaW)) - 1.0)*(lambda*n)
+        } else {
+          (y*(x.dot(w)) - 1.0)*(lambda*n)
+        }
+      }
 
       // compute projected gradient
       var proj_grad = grad
@@ -164,7 +185,7 @@ object CoCoA {
         proj_grad = Math.max(grad,0)
 
       if (Math.abs(proj_grad) != 0.0 ) {
-        val qii  = x.dot(x)
+        val qii = if (plus) x.dot(x)*sigma else x.dot(x)
         var newAlpha = 1.0
         if (qii != 0.0) {
           newAlpha = Math.min(Math.max((alpha(idx) - (grad / qii)), 0.0), 1.0)
@@ -172,7 +193,9 @@ object CoCoA {
 
         // update primal and dual variables
         val update = x.times( y*(newAlpha-alpha(idx))/(lambda*n) )
-        w = update.plus(w)
+        if (!plus) {
+          w = update.plus(w)
+        }
         deltaW = update.plus(deltaW)
         alpha(idx) = newAlpha
       }

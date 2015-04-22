@@ -70,9 +70,12 @@ object driver {
     // (corresponding to dual alphas being zero)
     val wInit = Array.fill(numFeatures)(0.0)
 
+    // run CoCoA+
+    val (finalwCoCoAPlus, finalalphaCoCoAPlus) = CoCoA.runCoCoA(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed, true)
+    OptUtils.printSummaryStatsPrimalDual("CoCoA+", data, finalwCoCoAPlus, finalalphaCoCoAPlus, lambda, testData)
 
     // run CoCoA
-    val (finalwCoCoA, finalalphaCoCoA) = CoCoA.runCoCoA(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed)
+    val (finalwCoCoA, finalalphaCoCoA) = CoCoA.runCoCoA(sc, data, n, wInit, numRounds, localIters, lambda, beta, chkptIter, testData, debugIter, seed, false)
     OptUtils.printSummaryStatsPrimalDual("CoCoA", data, finalwCoCoA, finalalphaCoCoA, lambda, testData)
 
     // optionally run other methods for comparison
