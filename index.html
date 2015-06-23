@@ -16,7 +16,7 @@
     <div class="wrapper">
       <header>
         <h1>CoCoA</h1>
-        <p>communication-efficient distributed coordinate ascent</p>
+        <p><em>a framework for communication-efficient distributed optimization</em></p>
 
         <p class="view"><a href="https://github.com/gingsmith/cocoa">View the Project on GitHub <small>gingsmith/cocoa</small></a></p>
 
@@ -30,7 +30,7 @@
       <section>
         
 
-<p>NEW! We've added support for faster additive udpates with CoCoA+. See more information <a href="http://arxiv.org/abs/1502.03508">here</a>.</p>
+<p>[New!] We've added support for faster additive udpates with CoCoA+. See more information <a href="http://arxiv.org/abs/1502.03508">here</a>.</p>
 
 <p>This code performs a comparison of 5 distributed algorithms for training of machine learning models, using <a href="http://spark.apache.org">Apache Spark</a>. The implemented algorithms are</p>
 
@@ -42,7 +42,7 @@
 <li>mini-batch stochastic subgradient descent (<em>mini-batch SGD</em>)</li>
 </ul>
 
-<p>The present code trains a standard SVM (hinge-loss, l2-regularized), and reports training and test error, as well as the duality gap certificate if the method is primal-dual.</p>
+<p>The present code trains a standard SVM (hinge-loss, l2-regularized) using SDCA as a local solver, and reports training and test error, as well as the duality gap certificate if the method is primal-dual. The code can be easily adapted to include other internal solvers or solve other objectives.</p>
 
 <h2>
 <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h2>
@@ -58,9 +58,11 @@
 <h2>
 <a id="references" class="anchor" href="#references" aria-hidden="true"><span class="octicon octicon-link"></span></a>References</h2>
 
-<p>The CoCoA algorithmic framework is described in more details in the following paper:</p>
+<p>The CoCoA and CoCoA+ algorithmic frameworks are described in more detail in the following papers:</p>
 
-<p><em>Jaggi, M., Smith, V., Takac, M., Terhorst, J., Krishnan, S., Hofmann, T., &amp; Jordan, M. I. (2014) <a href="http://papers.nips.cc/paper/5599-communication-efficient-distributed-dual-coordinate-ascent">Communication-Efficient Distributed Dual Coordinate Ascent</a> (pp. 3068–3076). NIPS 2014 - Advances in Neural Information Processing Systems 27.</em></p>
+<p><em>Ma, C., Smith, V., Jaggi, M., Jordan, Michael I., Richtarik, P., &amp; Takac, M. <a href="http://arxiv.org/abs/1502.03508"> Adding vs. Averaging in Distributed Primal-Dual Optimization</a>. ICML 2015 - International Conference on Machine Learning.</em></p>
+
+<p><em>Jaggi, M., Smith, V., Takac, M., Terhorst, J., Krishnan, S., Hofmann, T., &amp; Jordan, M. I. <a href="http://papers.nips.cc/paper/5599-communication-efficient-distributed-dual-coordinate-ascent"> Communication-Efficient Distributed Dual Coordinate Ascent</a> (pp. 3068–3076). NIPS 2014 - Advances in Neural Information Processing Systems 27.</em></p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/gingsmith">gingsmith</a></p>
