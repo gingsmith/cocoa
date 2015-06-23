@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>CoCoA by gingsmith</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>CoCoA</h1>
+        <p>communication-efficient distributed coordinate ascent</p>
+
+        <p class="view"><a href="https://github.com/gingsmith/cocoa">View the Project on GitHub <small>gingsmith/cocoa</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/gingsmith/cocoa/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/gingsmith/cocoa/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/gingsmith/cocoa">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        
+
+<p>NEW! We've added support for faster additive udpates with CoCoA+. See more information <a href="http://arxiv.org/abs/1502.03508">here</a>.</p>
+
+<p>This code performs a comparison of 5 distributed algorithms for training of machine learning models, using <a href="http://spark.apache.org">Apache Spark</a>. The implemented algorithms are</p>
+
+<ul>
+<li><em>CoCoA+</em></li>
+<li><em>CoCoA</em></li>
+<li>mini-batch stochastic dual coordinate ascent (<em>mini-batch SDCA</em>)</li>
+<li>stochastic subgradient descent with local updates (<em>local SGD</em>)</li>
+<li>mini-batch stochastic subgradient descent (<em>mini-batch SGD</em>)</li>
+</ul>
+
+<p>The present code trains a standard SVM (hinge-loss, l2-regularized), and reports training and test error, as well as the duality gap certificate if the method is primal-dual.</p>
+
+<h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h2>
+
+<p>How to run the code locally:</p>
+
+<pre><code>sbt/sbt assembly
+./run-demo-local.sh
+</code></pre>
+
+<p>(For the <code>sbt</code> script to run, make sure you have downloaded CoCoA into a directory whose path contains no spaces.)</p>
+
+<h2>
+<a id="references" class="anchor" href="#references" aria-hidden="true"><span class="octicon octicon-link"></span></a>References</h2>
+
+<p>The CoCoA algorithmic framework is described in more details in the following paper:</p>
+
+<p><em>Jaggi, M., Smith, V., Takac, M., Terhorst, J., Krishnan, S., Hofmann, T., &amp; Jordan, M. I. (2014) <a href="http://papers.nips.cc/paper/5599-communication-efficient-distributed-dual-coordinate-ascent">Communication-Efficient Distributed Dual Coordinate Ascent</a> (pp. 3068–3076). NIPS 2014 - Advances in Neural Information Processing Systems 27.</em></p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/gingsmith">gingsmith</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
