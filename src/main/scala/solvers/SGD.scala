@@ -2,8 +2,9 @@ package distopt.solvers
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import distopt.utils.Implicits._
 import distopt.utils._
+import breeze.linalg.{Vector, NumericOps, DenseVector, SparseVector}
+
 
 object SGD {
 
@@ -11,79 +12,63 @@ object SGD {
    * Implementation of distributed SGD, for mini-batch as well as localSGD variants.
    * Using hinge-loss SVM objective.
    * 
-   * @param sc
    * @param data RDD of all data examples
-   * @param wInit initial weight vector (has to be zero)
-   * @param numRounds number of outer iterations T in the paper
-   * @param localIters number of inner localSDCA iterations, H in the paper
-   * @param lambda the regularization parameter
-   * @param local whether to perform localSGD (local=true) or classical mini-batch SGD (local=false)
-   * @param beta scaling parameter. beta=1 gives averaging, beta=K=data.partitions.size gives (aggressive) adding
-   * @param chkptIter checkpointing the resulting RDDs from time to time, to ensure persistence and shorter dependencies
-   * @param testData
-   * @param debugIter
-   * @param seed
+   * @param params Algorithmic parameters
+   * @param debug Systems/debugging parameters
+   * @param local Whether to perform localSGD (local=true) or classical mini-batch SGD (local=false)
    * @return
    */
   def runSGD(
-    sc: SparkContext, 
-    data: RDD[SparseClassificationPoint],
-    n: Int,
-    wInit: Array[Double], 
-    numRounds: Int, 
-    localIters: Int, 
-    lambda: Double,
-    local: Boolean, 
-    beta: Double, 
-    chkptIter: Int,
-    testData: RDD[SparseClassificationPoint],
-    debugIter: Int,
-    seed: Int) : Array[Double] = {
+    data: RDD[LabeledPoint],
+    params: Params,
+    debug: DebugParams,
+    local: Boolean) : Vector[Double] = {
     
     var dataArr = data.mapPartitions(x => Iterator(x.toArray))
     val parts = data.partitions.size 	// number of partitions of the data, K in the paper
-    println("\nRunning SGD (with local updates = "+local+") on "+n+" data examples, distributed over "+parts+" workers")
+    println("\nRunning SGD (with local updates = "+local+") on "+params.n+" data examples, distributed over "+parts+" workers")
     
     // initialize w
-    var w = wInit
+    var w = params.wInit.copy
     
     var scaling = 1.0
     if (local) {
-      scaling = beta / parts
+      scaling = params.beta / parts
     } else {
-      scaling = beta / (parts * localIters)
+      scaling = params.beta / (parts * params.localIters)
     }
 
-    for(t <- 1 to numRounds){
+    for(t <- 1 to params.numRounds){
 
       // update step size
-      val step = 1/(lambda*(t))
+      val step = 1 / (params.lambda * (t))
 
       if (!local) {
         // scale weight vector
-        val scale = 1.0-(step*lambda)
-        w = w.map(_*scale)
+        val scale = 1.0 - (step * params.lambda)
+        w :*= scale
       }
 
       // find updates to w
-      val updates = dataArr.mapPartitions(partitionUpdate(_, w, lambda, ((t-1) * localIters * parts), localIters, local, parts, seed+t), preservesPartitioning = true).persist()
-      val primalUpdates = updates.reduce(_ plus _)
+      val updates = dataArr.mapPartitions(partitionUpdate(_, w, params.lambda, ((t-1) * params.localIters * parts), params.localIters, local, parts, debug.seed + t), preservesPartitioning = true).persist()
+      val primalUpdates = updates.reduce(_ + _)
       if (local) {
-        w = primalUpdates.times(scaling).plus(w)
+        w += (primalUpdates * scaling)
       } else {
-        w = primalUpdates.times(step * scaling).plus(w)
+        w += (primalUpdates * (step * scaling))
       }
 
       // optionally calculate errors
-      if (debugIter>0 && t % debugIter == 0) {
+      if (debug.debugIter > 0 && t % debug.debugIter == 0) {
         println("Iteration: " + t)
-        println("primal objective: " + OptUtils.computePrimalObjective(data, w, lambda))
-        if (testData != null) { println("test error: " + OptUtils.computeClassificationError(testData, w)) }
+        println("primal objective: " + OptUtils.computePrimalObjective(data, w, params.lambda))
+        if (debug.testData != null) { println("test error: " + OptUtils.computeClassificationError(debug.testData, w)) }
       }
     }
 
     return w
   }
+
 
   /**
    * Performs one round of local updates using SGD steps on the local points, 
@@ -100,25 +85,25 @@ object SGD {
    * @return
    */
   def partitionUpdate(
-    localData: Iterator[Array[SparseClassificationPoint]], 
-    wInit: Array[Double], 
+    localData: Iterator[Array[LabeledPoint]], 
+    wInit: Vector[Double], 
     lambda:Double, 
     t:Double, 
     localIters:Int, 
     local:Boolean, 
     parts:Int,
-    seed: Int) : Iterator[Array[Double]] = {
+    seed: Int) : Iterator[Vector[Double]] = {
 
     val dataArr = localData.next()
     val nLocal = dataArr.length
     var r = new scala.util.Random(seed)
-    var w = wInit.clone
-    var deltaW = Array.fill(wInit.length)(0.0)
+    var w = wInit.copy
+    var deltaW = Vector.zeros[Double](wInit.length)
 
     // perform updates
     for (i <- 1 to localIters) {
 
-      val step = 1/(lambda*(t+i))
+      val step = 1 / (lambda * (t + i))
 
       // randomly select an element
       val idx = r.nextInt(nLocal)
@@ -127,25 +112,25 @@ object SGD {
       val x = currPt.features
 
       // calculate stochastic sub-gradient (here for SVM hinge loss)
-      val eval = 1.0 - (y*(x.dot(w)))
+      val eval = 1.0 - (y * (x.dot(w)))
 
       if (local) {
         // scale weight vector
         val scale = 1.0 - (step * lambda)
-        w = w.map(_ * scale)
+        w :*= scale
       }
 
       // stochastic sub-gradient, update
       if (eval > 0) {
-        val update = x.times(y)
-        deltaW = update.plus(deltaW)
+        val update = x * y
+        deltaW += update
         if (local){
-          w = (update.times(step)).plus(w)
+          w += (update * step)
         }
       }
 
       if (local) {
-        deltaW = (wInit.times(-1.0)).plus(w)
+        deltaW = w - wInit
       }
     }
 

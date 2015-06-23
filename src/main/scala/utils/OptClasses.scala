@@ -1,76 +1,42 @@
 package distopt.utils
 
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import breeze.linalg.{SparseVector, Vector}
 
-// Dense Classification Point
-case class ClassificationPoint(val label: Double, val features: Array[Double])
 
-// Sparse Classifcation Point
-case class SparseClassificationPoint(val index: Int, val label: Double, val features: SparseVector)
+// Labeled point with sparse features for classification or regression tasks
+case class LabeledPoint(val label: Double, val features: SparseVector[Double])
 
-// Dense Regression Point
-case class RegressionPoint(val label: Double, val features: Array[Double])
 
-// Sparse Regression Point
-case class SparseRegressionPoint(val label: Double, val features: SparseVector)
+/** Algorithm Params
+   * @param loss - the loss function l_i (assumed equal for all i)
+   * @param n - number of data points
+   * @param wInit - initial weight vector
+   * @param numRounds - number of outer iterations (T in the paper)
+   * @param localIters - number of inner localSDCA iterations (H in the paper)
+   * @param lambda - the regularization parameter
+   * @param beta - scaling parameter for CoCoA
+   * @param gamma - aggregation parameter for CoCoA+ (gamma=1 for adding, gamma=1/K for averaging) 
+   */
+case class Params(
+    loss: (LabeledPoint, Vector[Double]) => Double, 
+    n: Int,
+    wInit: Vector[Double], 
+    numRounds: Int, 
+    localIters: Int, 
+    lambda: Double, 
+    beta: Double,
+    gamma: Double)
 
-// Sparse Vector Implementation
-class SparseVector(val indices: Array[Int], val values: Array[Double]) extends Serializable{
 
-  def apply(index: Int): Double = values.apply(indices.indexOf(index))
-
-  def getOrElse(index: Int, default: Double): Double = {
-    if(this.indices.contains(index)){
-      return this.values(indices.indexOf(index))
-    } 
-    return default
-  }
-
-  // scale a sparse vector by a constant
-  def times(c: Double) : SparseVector = {
-    return new SparseVector(this.indices,this.values.map(x => x*c))
-  }
-
-  // add this sparse vector to another sparse vector, return sparse vector
-  def plus(sparse:SparseVector) : SparseVector = {
-    val combined = sparse.indices.zip(sparse.values) ++ this.indices.zip(this.values)
-    val sumArr = combined.groupBy( _._1).map { case (k,v) => k -> v.map(_._2).sum }.toArray
-    return new SparseVector(sumArr.map(x => x._1), sumArr.map(x => x._2))
-  }
-
-  // add this sparse vector to a dense vector, return dense vector
-  def plus(dense:Array[Double]) : Array[Double] = {
-    this.indices.zipWithIndex.foreach{ case(idx,i) => (dense(idx) = dense(idx)+this.values(i))}
-    return dense
-  }
-
-  // dot product of sparse vector (sortedmap) and dense vector
-  def dot(dense: Array[Double]) : Double = {
-    var total = 0.0
-    this.indices.zipWithIndex.foreach{ case(idx,i) => (total += this.values(i)*dense(idx)) }
-    return total
-  }
-
-  // dot product of two sparse vectors
-  def dot(sparse: SparseVector) : Double = {
-    var total = 0.0
-    this.indices.zipWithIndex.foreach{ case(idx,i) => (total += this.values(i)*sparse.getOrElse(idx,0.0))}
-    return total
-  }
-}
-
-class DoubleArray(arr: Array[Double]){
-  def plus(plusArr: Array[Double]) : Array[Double] = {
-    val retArr = (0 to plusArr.length-1).map( i => this.arr(i) + plusArr(i)).toArray
-    return retArr
-  }
-  def times(c: Double) : Array[Double] = {
-    val retArr = this.arr.map(x => x*c)
-    return retArr
-  }
-}
-
-object Implicits{
-  implicit def arraytoDoubleArray(arr: Array[Double]) = new DoubleArray(arr)
-}
+/** Debug Params
+   * @param testData
+   * @param debugIter
+   * @param seed
+   * @param chkptIter checkpointing the resulting RDDs from time to time, to ensure persistence and shorter dependencies
+   */
+case class DebugParams(
+    testData: RDD[LabeledPoint],
+    debugIter: Int,
+    seed: Int,
+    chkptIter: Int)
