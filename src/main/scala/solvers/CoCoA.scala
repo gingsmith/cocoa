@@ -180,7 +180,7 @@ object CoCoA {
         // update primal and dual variables
         val update = x * (y * (newAlpha - alpha(idx)) / (lambda * n))
         if (!plus) {
-          w = w + update
+          w += update
         }
         deltaW += update
         alpha(idx) = newAlpha
