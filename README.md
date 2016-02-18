@@ -1,8 +1,8 @@
 # CoCoA - A Framework for Communication-Efficient Distributed Optimization
 
-New! We've added support for L1-regularized objectives with ProxCoCoA+. See more information [here](http://arxiv.org/abs/1512.04011).
+New! ProxCoCoA+ provides support for L1-regularized objectives. See [paper](http://arxiv.org/abs/1512.04011) and [code](https://github.com/gingsmith/proxcocoa).
 
-New! We've added support for faster additive udpates with CoCoA+. See more information [here](http://arxiv.org/abs/1502.03508).
+We've added support for faster additive udpates with CoCoA+. See more information [here](http://arxiv.org/abs/1502.03508).
 
 This code performs a comparison of 5 distributed algorithms for training of machine learning models, using [Apache Spark](http://spark.apache.org). The implemented algorithms are
  - _CoCoA+_
@@ -26,8 +26,8 @@ sbt/sbt assembly
 ## References
 The CoCoA+ and CoCoA algorithmic frameworks are described in more detail in the following papers:
 
-_Smith, V., Forte, S., Jordan, M. I., Jaggi, M. [L1-Regularized Distributed Optimization: A Communication-Efficient Primal-Dual Framework](http://arxiv.org/abs/1512.04011)._
-
 _Ma, C., Smith, V., Jaggi, M., Jordan, M. I., Richtarik, P., & Takac, M. [Adding vs. Averaging in Distributed Primal-Dual Optimization](http://arxiv.org/abs/1502.03508). ICML 2015 - International Conference on Machine Learning._
 
 _Jaggi, M., Smith, V., Takac, M., Terhorst, J., Krishnan, S., Hofmann, T., & Jordan, M. I. [Communication-Efficient Distributed Dual Coordinate Ascent](http://papers.nips.cc/paper/5599-communication-efficient-distributed-dual-coordinate-ascent) (pp. 3068–3076). NIPS 2014 - Advances in Neural Information Processing Systems 27._
+
+_Smith, V., Forte, S., Jordan, M. I., Jaggi, M. [L1-Regularized Distributed Optimization: A Communication-Efficient Primal-Dual Framework](http://arxiv.org/abs/1512.04011)._
