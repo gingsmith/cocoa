@@ -26,6 +26,8 @@ sbt/sbt assembly
 ## References
 The CoCoA+ and CoCoA algorithmic frameworks are described in more detail in the following papers:
 
+_Smith, V., Forte, S., Ma, C., Takac, M., Jordan, M. I., Jaggi, M. [CoCoA: A General Framework for Communication-Efficient Distributed Optimization](https://arxiv.org/abs/1611.02189). Journal of Machine Learning Research (JMLR), 2018._
+
 _Ma, C., Smith, V., Jaggi, M., Jordan, M. I., Richtarik, P., & Takac, M. [Adding vs. Averaging in Distributed Primal-Dual Optimization](http://arxiv.org/abs/1502.03508). ICML 2015 - International Conference on Machine Learning._
 
 _Jaggi, M., Smith, V., Takac, M., Terhorst, J., Krishnan, S., Hofmann, T., & Jordan, M. I. [Communication-Efficient Distributed Dual Coordinate Ascent](http://papers.nips.cc/paper/5599-communication-efficient-distributed-dual-coordinate-ascent) (pp. 3068–3076). NIPS 2014 - Advances in Neural Information Processing Systems 27._
